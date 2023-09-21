@@ -1,0 +1,13 @@
+name = "MieCoefficients"
+uuid = "2ca0a2e5-5b2a-4168-8b3c-ae648bb149de"
+authors = ["Olivier Merchiers <omerchiers@gmail.com> and contributors"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
