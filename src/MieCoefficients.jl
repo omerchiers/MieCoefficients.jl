@@ -2,7 +2,7 @@
 module MieCoefficients
 
 # Dependencies
-using MyPhysicalConstants, OpticalProperties, MultiLayerNFRHT, SpecialFunctions
+using MyPhysicalConstants, OpticalProperties, MultiLayerNFRHT, SpecialFunctions, MyPhysicalConstants
 
 # Import for overloading functions
 import OpticalProperties: permittivity, refractive_index
@@ -15,6 +15,8 @@ export AbstractObject, Sphere, Cylinder
 
 
 include("spheres.jl")
+include("spherical_cavities.jl")
 include("cylinders.jl")
+
 
 end
