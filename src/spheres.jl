@@ -18,13 +18,16 @@ abstract type AbstractObject end
 struct Sphere{T <: Real, U <: OptProp} <: AbstractObject
     material :: U
     radius   :: T
+    temperature :: T
 end
 
-struct SphereCavity{T<:Real,U,V<:OptProp} <: AbstractObject
-    material::U
-    inner_material::V
-    radius::T
+struct Cavity{T <: Real, U <: OptProp} <: AbstractObject
+    material :: U
+    inner_material :: U
+    radius   :: T
+    temperature :: T
 end
+
 
 permittivity(object::AbstractObject, w) = permittivity(object.material, w)
 refractive_index(object::AbstractObject, w) = refractive_index(object.material, w)
@@ -88,25 +91,35 @@ Riccati-Bessel function of the third kind at order `nu`, ``ξ_ν(x) = x(j_ν(x) 
 """
 riccatibesselksi1(nu, x) = √(π*x/2) * (besselj(nu + 1//2, x) + im * bessely(nu + 1//2, x))
 
-function mie_coefficients_openlibm(sphere::Sphere, w)
+
+"""
+    riccatibesselksi2(nu, x)
+
+Riccati-Bessel function of the third kind at order `nu`, ``ξ_ν(x) = x(j_ν(x) - iy_ν(x))``.
+"""
+riccatibesselksi2(nu, x) = √(π*x/2) * (besselj(nu + 1//2, x) - im * bessely(nu + 1//2, x))
+
+
+function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
     x_stop, y_stop, n_max = max_order(sphere, w)
+    nmax != 0 ? n_max = nmax : nothing
     size_par = size_parameter(sphere, w)
     ref_idx = refractive_index(sphere, w)
     y = size_par * ref_idx
     T = typeof(size_par)
 
     d = zeros(Complex{T}, n_max + 1)
-    av = zeros(Complex{T}, round(Int, x_stop))
-    bv = zeros(Complex{T}, round(Int, x_stop))
+    av = zeros(Complex{T}, n_max)
+    bv = zeros(Complex{T}, n_max)
 
     # downward recursion
-    @inbounds for n = n_max-1:-1:1
+    @inbounds for n = n_max:-1:1
         rn = n + 1
         d[n] = (rn / y) - (1 / (d[n+1] + rn / y))
     end
 
     # upward recursion
-    @inbounds for n = 1:round(Int, x_stop)
+    @inbounds for n = 1:n_max #round(Int, x_stop)
         psi_n = riccatibesselpsi(n, size_par)
         ksi_n = riccatibesselksi1(n, size_par)
         psi_n_1 = riccatibesselpsi(n - 1, size_par)
@@ -120,8 +133,9 @@ function mie_coefficients_openlibm(sphere::Sphere, w)
 end
 
 
-function mie_coefficients_handcoded(sphere::Sphere, w)
+function mie_coefficients_handcoded(sphere::Sphere, w, nmax = 0 )
     x_stop, y_stop, n_max = max_order(sphere, w)
+    nmax != 0 ? n_max = nmax : nothing
     size_par = size_parameter(sphere, w)
     ref_idx = refractive_index(sphere, w)
     y = size_par * ref_idx
@@ -133,7 +147,7 @@ function mie_coefficients_handcoded(sphere::Sphere, w)
     # downward recursion
     @inbounds for n = n_max-1:-1:1
         rn = n + 1
-        d[n] = (rn / y) - (1 / (d[n+1] + rn / y))
+        d[n] = (rn / y) - (1 / (d[rn] + rn / y))
     end
 
     psi0 = cos(size_par)
@@ -172,11 +186,11 @@ If `handcoded` is `false`, it uses the bessel functions from SpecialFunctions.
 Otherwise it uses the code from Bohren and Huffman which is about 10 times
 but not reliable for orders `nu = around`.
 """
-function mie_coefficients(sphere::Sphere, w; handcoded=false )
+function mie_coefficients(sphere::Sphere, w, nmax = 0; handcoded=false )
     if handcoded==false
-        return  mie_coefficients_openlibm(sphere::Sphere, w)
+        return  mie_coefficients_openlibm(sphere::Sphere, w, nmax)
     elseif handcoded==true
-        return  mie_coefficients_handcoded(sphere::Sphere, w)
+        return  mie_coefficients_handcoded(sphere::Sphere, w, nmax)
     end
 end
 
@@ -234,3 +248,89 @@ function efficiencies(sphere::Sphere, comp :: MultipoleOrder  , w; kwargs...)
     2 / (size_par^2) * q_ext,
     2 / (size_par^2) * (q_ext - q_sca)
 end
+
+
+
+
+function mie_coefficients(cavity::Cavity, w, nmax = 0)
+    x_stop, y_stop, n_max = max_order(cavity, w)
+    nmax != 0 ? n_max = nmax : nothing
+    x = size_parameter(cavity, w)
+    ref_idx = refractive_index(cavity, w)
+    y = x * ref_idx
+    T = typeof(x)
+
+    gx = zeros(Complex{T}, n_max + 1)
+    gx[1] = -im
+    gy = zeros(Complex{T}, n_max + 1)
+    gy[1] = -im
+    dx = zeros(Complex{T}, n_max + 1)
+    cv = zeros(Complex{T}, n_max)
+    dv = zeros(Complex{T}, n_max)
+    
+
+    # downward recursion
+    @inbounds for n = n_max:-1:1
+        rn = n + 1
+        dx[n] = (rn / x) - (1 / (dx[rn] + rn / x))
+    end
+        
+    # upward recursion
+    @inbounds for n = 1:n_max
+        if n==1
+            gy[1] = -im 
+        else    
+            rn = n - 1 
+            gy[n] = (1 / (- gy[rn] + n / y)) - (n / y)
+        end
+
+        psi_n = riccatibesselpsi(n, x)
+        ksi_n = riccatibesselksi1(n, x)
+        psi_n_1 = riccatibesselpsi(n - 1, x)
+        ksi_n_1 = riccatibesselksi1(n - 1, x)
+          
+        t_c = gy[n] + ref_idx * n / x
+        t_d = gy[n] * ref_idx + n / x
+
+        
+        cv[n] = -( t_c * ksi_n - ref_idx * ksi_n_1 ) / ( t_c * psi_n - ref_idx * psi_n_1 ) #TE
+        dv[n] = -( t_d * ksi_n - ksi_n_1 ) / ( t_d * psi_n - psi_n_1 ) # TM
+    end
+    return cv, dv
+end
+
+
+struct SphericalShell{U,V} <: AbstractObject
+    sphere::U
+    cavity::V
+end
+
+function transmission(sphericalshell :: SphericalShell, w, nmax=0)
+    (;sphere, cavity) = sphericalshell
+    xsph = size_parameter(sphere, w)
+    xsph_stop, ysph_stop, nsph_max = max_order(sphere, w)
+    
+    xcav = size_parameter(cavity, w)
+    xcav_stop, ycav_stop, ncav_max = max_order(cavity, w)
+   
+    n_max = max(nsph_max, ncav_max)
+    nmax != 0 ? n_max = nmax : nothing 
+
+    te_sph, tm_sph = mie_coefficients(sphere, w, n_max)
+    te_cav, tm_cav = mie_coefficients(cavity, w, n_max)
+    
+    qw_te = 0.0
+    qw_tm = 0.0
+    
+    tw_te_1 = 0.0
+    tw_tm_1 = 0.0
+
+    for i in 1:n_max
+        tw_te += (2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 + te_cav[i]*te_sph[i])^2
+        tw_tm += (2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 + tm_cav[i]*tm_sph[i])^2        
+      #  err = abs(qw_te + qw_tm - qw_te_1 - qw_tm_1)/(qw_te_1 + qw_tm_1)
+    end
+    return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm))
+
+end
+
