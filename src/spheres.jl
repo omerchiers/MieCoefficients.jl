@@ -305,7 +305,7 @@ struct SphericalShell{U,V} <: AbstractObject
     cavity::V
 end
 
-function transmission(sphericalshell :: SphericalShell, w, nmax=0; rtol=1e-6)
+function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
     (;sphere, cavity) = sphericalshell
     xsph = size_parameter(sphere, w)
     xsph_stop, ysph_stop, nsph_max = max_order(sphere, w)
@@ -314,7 +314,7 @@ function transmission(sphericalshell :: SphericalShell, w, nmax=0; rtol=1e-6)
     xcav_stop, ycav_stop, ncav_max = max_order(cavity, w)
    
     n_max = max(nsph_max, ncav_max)
-    nmax != 0 ? n_max = 100*nmax : nothing 
+    nmax != 0 ? n_max = nmax : nothing 
 
     te_sph, tm_sph = mie_coefficients(sphere, w, n_max)
     te_cav, tm_cav = mie_coefficients(cavity, w, n_max)
@@ -324,26 +324,27 @@ function transmission(sphericalshell :: SphericalShell, w, nmax=0; rtol=1e-6)
     
     qw_te_1 = 0.0
     qw_tm_1 = 0.0
-    err = 1
-    i=1
+    err = 1.0
 
-    while (err > rtol) && (i < n_max)
-        #=
-        log_num_te = log((real(te_cav[i]) + 1)) + log((real(te_sph[i]) - abs(te_sph[i])^2))
-        log_den_te = te_cav[i]*te_sph[i]
-        log_num_tm = log((real(tm_cav[i]) + 1)) + log((real(tm_sph[i]) - abs(tm_sph[i])^2))
-        log_den_tm = tm_cav[i]*tm_sph[i]
-        =#  
-        qw_te_1 = -(2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 + te_cav[i]*te_sph[i])^2
-        qw_tm_1 = -(2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 + tm_cav[i]*tm_sph[i])^2        
-        qw_te += qw_te_1
-        qw_tm += qw_tm_1
-        err = abs(qw_te + qw_tm - qw_te_1 - qw_tm_1)/(qw_te_1 + qw_tm_1)
-        i += 1
+    if nmax != 0
+        for i in 1:nmax
+            qw_te += -(2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 + te_cav[i]*te_sph[i])^2
+            qw_tm += -(2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 + tm_cav[i]*tm_sph[i])^2        
+        end
+        return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm)), n_max
+    else
+        i=1
+        while (err > rtol) && (i <= n_max) 
+            qw_te += -(2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 + te_cav[i]*te_sph[i])^2
+            qw_tm += -(2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 + tm_cav[i]*tm_sph[i])^2        
+            err = abs(qw_te_1 + qw_tm_1 - qw_te - qw_tm)/(qw_te + qw_tm)
+            @show err
+            qw_te_1 = qw_te
+            qw_tm_1 = qw_tm 
+            i += 1
+        end
+        i > n_max ? error("The number of iterations exceeds the value of n_max.") : nothing
+        return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm)), n_max
     end
-    i == n_max ? error("The number of iterations exceeds the value of n_max. 
-                        Consider increasing the number of iterations") : nothing
-    return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm))
-
 end
 
