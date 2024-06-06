@@ -338,7 +338,6 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
             qw_te += -(2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 + te_cav[i]*te_sph[i])^2
             qw_tm += -(2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 + tm_cav[i]*tm_sph[i])^2        
             err = abs(qw_te_1 + qw_tm_1 - qw_te - qw_tm)/(qw_te + qw_tm)
-            @show err
             qw_te_1 = qw_te
             qw_tm_1 = qw_tm 
             i += 1
