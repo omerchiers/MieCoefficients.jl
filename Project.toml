@@ -7,6 +7,7 @@ version = "1.0.0-DEV"
 MultiLayerNFRHT = "1437eaf2-1009-11e9-29b3-179d2bd09029"
 MyPhysicalConstants = "03bd0ab0-1009-11e9-287f-65bf770f7c3e"
 OpticalProperties = "8b3727e0-1008-11e9-018f-895af1a7be12"
+QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
 [compat]
