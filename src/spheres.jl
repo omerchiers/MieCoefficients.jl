@@ -35,6 +35,7 @@ refractive_index(object::AbstractObject, w) = refractive_index(object.material, 
 # Helper functions
 radius(object :: AbstractObject) = object.radius
 size_parameter(object :: AbstractObject,w) = object.radius*w/c0
+temperature(object::AbstractObject) = object.temperature
 
 function max_order(object::AbstractObject, w)
     x = size_parameter(object, w)
@@ -278,7 +279,7 @@ function mie_coefficients(cavity::Cavity, w, nmax = 0)
     # upward recursion
     @inbounds for n = 1:n_max
         if n==1
-            gy[1] = -im 
+            gy[1] = im # check this sign!!! Wy originally -im??? 
         else    
             rn = n - 1 
             gy[n] = (1 / (- gy[rn] + n / y)) - (n / y)
@@ -305,6 +306,9 @@ struct SphericalShell{U,V} <: AbstractObject
     cavity::V
 end
 
+sphere(spsh :: SphericalShell) = spsh.sphere
+cavity(spsh :: SphericalShell) = spsh.cavity
+
 function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
     (;sphere, cavity) = sphericalshell
     xsph = size_parameter(sphere, w)
@@ -314,7 +318,7 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
     xcav_stop, ycav_stop, ncav_max = max_order(cavity, w)
    
     n_max = max(nsph_max, ncav_max)
-    nmax != 0 ? n_max = nmax : nothing 
+    nmax != 0 ? n_max = nmax : nothing
 
     te_sph, tm_sph = mie_coefficients(sphere, w, n_max)
     te_cav, tm_cav = mie_coefficients(cavity, w, n_max)
@@ -328,22 +332,52 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
 
     if nmax != 0
         for i in 1:nmax
-            qw_te += -(2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 + te_cav[i]*te_sph[i])^2
-            qw_tm += -(2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 + tm_cav[i]*tm_sph[i])^2        
+            qw_te += (2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 - te_cav[i]*te_sph[i])^2
+            qw_tm += (2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 - tm_cav[i]*tm_sph[i])^2        
         end
-        return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm)), n_max
+        return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm), n_max = n_max)
     else
-        i=1
-        while (err > rtol) && (i <= n_max) 
-            qw_te += -(2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 + te_cav[i]*te_sph[i])^2
-            qw_tm += -(2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 + tm_cav[i]*tm_sph[i])^2        
-            err = abs(qw_te_1 + qw_tm_1 - qw_te - qw_tm)/(qw_te + qw_tm)
+        i=0
+        while (err > rtol) && (i <= n_max)
+            i += 1 
+            qw_te += (2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 - te_cav[i]*te_sph[i])^2 #check signs!!
+            qw_tm += (2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 - tm_cav[i]*tm_sph[i])^2        
+            err = abs(qw_te_1 + qw_tm_1 - qw_te - qw_tm)/abs(qw_te + qw_tm)
             qw_te_1 = qw_te
             qw_tm_1 = qw_tm 
-            i += 1
         end
-        i > n_max ? error("The number of iterations exceeds the value of n_max.") : nothing
-        return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm)), n_max
+        i > n_max ? error("The calculation did not converge. The number of iterations exceeds the value of n_max.") : nothing 
+        err > rtol ? error("The calculation did not converge. The relative error is larger than rtol.") : nothing
+        return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm), numiter = i, n_max = n_max, rel_error = err)
     end
 end
 
+
+"Spectral heat flux"
+function heat_flux(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
+    (;sphere, cavity) = sphericalshell
+    T1 = temperature(sphere)
+    T2 = temperature(cavity)
+    delTheta = (bose_einstein(w,T1) - bose_einstein(w,T2))
+    transm = transmission(sphericalshell, w; nmax, rtol)
+    qw_te = delTheta * transm[:te]
+    qw_tm = delTheta * transm[:tm]
+    qw_tot = delTheta * transm[:total]
+    return (te = qw_te, tm = qw_tm, total = qw_tot, nmax = transm[:n_max])
+end
+
+
+"Total heat flux"
+function heat_flux(sphericalshell :: SphericalShell; w1 = 0.0, w2 = Inf, nmax=0, rtol=1e-6, rtol_int = 1e-6)
+    (;sphere, cavity) = sphericalshell
+    hf_w(w) = heat_flux(sphericalshell, w; nmax, rtol)
+    qte_w(u) = hf_w(u*kb/ħ)[:te]
+    qtm_w(u) = hf_w(u*kb/ħ)[:tm]
+    
+    u1 = w1*ħ/kb
+    u2 = w2*ħ/kb
+
+    (qte, err) = quadgk(qte_w, u1 , u2 ; rtol = rtol_int)
+    (qtm, err) = quadgk(qtm_w, u1 , u2 ; rtol = rtol_int)
+    return (te = qte * kb / ħ, tm = qtm * kb / ħ, total = (qte + qtm) * kb / ħ)
+end
