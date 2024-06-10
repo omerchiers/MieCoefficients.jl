@@ -3,6 +3,7 @@ module MieCoefficients
 
 # Dependencies
 using MyPhysicalConstants, OpticalProperties, MultiLayerNFRHT, SpecialFunctions, MyPhysicalConstants
+using QuadGK
 
 # Import for overloading functions
 import OpticalProperties: permittivity, refractive_index
