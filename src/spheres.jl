@@ -226,24 +226,31 @@ function efficiencies(sphere::Sphere, w; kwargs...)
 end
 
 
-function efficiencies(sphere::Sphere, comp :: MultipoleOrder  , w; kwargs...)
+function efficiencies_n(sphere::Sphere, w, order; kwargs...)
+    size_par = size_parameter(sphere, w)
+    
+    a, b = mie_coefficients(sphere, w, order; kwargs...)
+    q_sca = (2 * order + 1) * (abs(a[order])^2 + abs(b[order])^2)
+    q_ext = (2 * order + 1) * real(a[order] + b[order])
+    
+    return 2 / (size_par^2) * q_sca,
+    2 / (size_par^2) * q_ext,
+    2 / (size_par^2) * (q_ext - q_sca)
+end
+
+
+function efficiencies_n(sphere::Sphere, w, mp_order :: MultipoleOrder; kwargs...)
     size_par = size_parameter(sphere, w)
     x_stop, y_stop, n_max = max_order(sphere, w)
 
     a, b = mie_coefficients(sphere, w; kwargs...)
-    q_sca = 0
-    q_ext = 0
-
-    if typeof(comp) == EM
+    if typeof(mp_order) == EM
         c = a
-    elseif typeof(comp) == MM
+    elseif typeof(mp_order) == MM
         c = b
     end
-
-    for n = 1:round(Int, x_stop)
-        q_sca += (2 * n + 1) * (abs(c[n])^2)
-        q_ext += (2 * n + 1) * real(c[n])
-    end
+    q_sca = (2 * n + 1) * (abs(c[n])^2)
+    q_ext = (2 * n + 1) * real(c[n])
 
     return 2 / (size_par^2) * q_sca,
     2 / (size_par^2) * q_ext,
@@ -312,6 +319,15 @@ function transmission_n(miecoeff_sphere, miecoeff_cavity, order)
     sph = miecoeff_sphere
     cav = miecoeff_cavity
     return (2 * order + 1) * (real(cav) + 1) * (real(sph) - abs(sph)^2) / abs(1 - cav * sph)^2 
+end
+
+function transmission_n(sphericalshell :: SphericalShell, w, order)
+    (;sphere, cavity) = sphericalshell
+    sph_te, sph_tm  = mie_coefficients(sphere, w, order)
+    cav_te, cav_tm = mie_coefficients(cavity, w, order)
+    tr_te = transmission_n(sph_te[order], cav_te[order], order)
+    tr_tm = transmission_n(sph_tm[order], cav_tm[order], order)
+    return (te = tr_te, tm = tr_tm, total = tr_te + tr_tm)  
 end
 
 
