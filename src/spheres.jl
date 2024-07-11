@@ -103,18 +103,19 @@ riccatibesselksi2(nu, x) = √(π*x/2) * (besselj(nu + 1//2, x) - im * bessely(n
 
 function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
     x_stop, y_stop, n_max = max_order(sphere, w)
+    n_max_down = n_max + 100
     nmax != 0 ? n_max = nmax : nothing
     size_par = size_parameter(sphere, w)
     ref_idx = refractive_index(sphere, w)
     y = size_par * ref_idx
     T = typeof(size_par)
 
-    d = zeros(Complex{T}, n_max + 1)
+    d = zeros(Complex{T}, n_max_down)
     av = zeros(Complex{T}, n_max)
     bv = zeros(Complex{T}, n_max)
-
+    
     # downward recursion
-    @inbounds for n = n_max:-1:1
+    @inbounds for n = n_max_down:-1:1
         rn = n + 1
         d[n] = (rn / y) - (1 / (d[n+1] + rn / y))
     end
@@ -130,23 +131,24 @@ function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
         av[n] = (t_a * psi_n - psi_n_1) / (t_a * ksi_n - ksi_n_1)
         bv[n] = (t_b * psi_n - psi_n_1) / (t_b * ksi_n - ksi_n_1)
     end
-    return av, bv
+    return av[1:n_max], bv[1:n_max]
 end
 
 
 function mie_coefficients_handcoded(sphere::Sphere, w, nmax = 0 )
     x_stop, y_stop, n_max = max_order(sphere, w)
+    n_max_down = n_max + 100
     nmax != 0 ? n_max = nmax : nothing
     size_par = size_parameter(sphere, w)
     ref_idx = refractive_index(sphere, w)
     y = size_par * ref_idx
 
-    d = zeros(Complex{Float64}, n_max + 1)
+    d = zeros(Complex{Float64}, n_max_down)
     av = zeros(Complex{Float64}, round(Int, x_stop))
     bv = zeros(Complex{Float64}, round(Int, x_stop))
 
     # downward recursion
-    @inbounds for n = n_max-1:-1:1
+    @inbounds for n = n_max_down:-1:1
         rn = n + 1
         d[n] = (rn / y) - (1 / (d[rn] + rn / y))
     end
@@ -356,10 +358,10 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
     if nmax != 0
         for i in 1:nmax
             qw_te += (2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 - te_cav[i]*te_sph[i])^2
-            qw_tm += (2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 - tm_cav[i]*tm_sph[i])^2        
+            qw_tm += (2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 - tm_cav[i]*tm_sph[i])^2
         end
         return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm), n_max = n_max)
-    else
+    elseif nmax == 0
         i=0
         while (err > rtol) && (i < n_max)
             i += 1 
