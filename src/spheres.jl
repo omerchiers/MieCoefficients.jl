@@ -115,13 +115,13 @@ function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
     bv = zeros(Complex{T}, n_max)
     
     # downward recursion
-    @inbounds for n = n_max_down:-1:1
+    for n = (n_max_down-1):-1:1
         rn = n + 1
         d[n] = (rn / y) - (1 / (d[n+1] + rn / y))
     end
 
     # upward recursion
-    @inbounds for n = 1:n_max #round(Int, x_stop)
+    for n = 1:n_max #round(Int, x_stop)
         psi_n = riccatibesselpsi(n, size_par)
         ksi_n = riccatibesselksi1(n, size_par)
         psi_n_1 = riccatibesselpsi(n - 1, size_par)
@@ -148,7 +148,7 @@ function mie_coefficients_handcoded(sphere::Sphere, w, nmax = 0 )
     bv = zeros(Complex{Float64}, round(Int, x_stop))
 
     # downward recursion
-    @inbounds for n = n_max_down:-1:1
+    for n = (n_max_down-1):-1:1
         rn = n + 1
         d[n] = (rn / y) - (1 / (d[rn] + rn / y))
     end
@@ -221,7 +221,10 @@ function efficiencies(sphere::Sphere, w; kwargs...)
         q_sca += (2 * n + 1) * (abs(a[n])^2 + abs(b[n])^2)
         q_ext += (2 * n + 1) * real(a[n] + b[n])
     end
-
+    
+    isnan(q_ext) ? (@show w) : nothing
+    isnan(q_sca) ? (@show w) : nothing
+    
     return 2 / (size_par^2) * q_sca,
     2 / (size_par^2) * q_ext,
     2 / (size_par^2) * (q_ext - q_sca)
@@ -298,8 +301,8 @@ function mie_coefficients(cavity::Cavity, w, nmax = 0)
         psi_n_1 = riccatibesselpsi(n - 1, x)
         ksi_n_1 = riccatibesselksi1(n - 1, x)
 
-        t_c = gy[n] + exp( log(ref_idx)  +log(n) -log(x))
-        t_d = exp(log(gy[n]) + log(ref_idx)) + exp(log(n) - log(x))
+        t_c = gy[n] + ref_idx * n / x
+        t_d = gy[n] * ref_idx + n / x
          
         cv[n] = -( t_c * ksi_n - ref_idx * ksi_n_1 ) / ( t_c * psi_n - ref_idx * psi_n_1 ) #TE
         dv[n] = -( t_d * ksi_n - ksi_n_1 ) / ( t_d * psi_n - psi_n_1 ) # TM
@@ -329,7 +332,9 @@ function transmission_n(sphericalshell :: SphericalShell, w, order)
     cav_te, cav_tm = mie_coefficients(cavity, w, order)
     tr_te = transmission_n(sph_te[order], cav_te[order], order)
     tr_tm = transmission_n(sph_tm[order], cav_tm[order], order)
-    return (te = tr_te, tm = tr_tm, total = tr_te + tr_tm)  
+    tr_tot = tr_te + tr_tm
+    isnan(tr_tot) ? (@show w) : nothing
+    return (te = tr_te, tm = tr_tm, total = tr_tot)  
 end
 
 
