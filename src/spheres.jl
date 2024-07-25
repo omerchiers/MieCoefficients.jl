@@ -131,7 +131,7 @@ function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
         av[n] = (t_a * psi_n - psi_n_1) / (t_a * ksi_n - ksi_n_1)
         bv[n] = (t_b * psi_n - psi_n_1) / (t_b * ksi_n - ksi_n_1)
     end
-    return av[1:n_max], bv[1:n_max]
+    return av, bv
 end
 
 
