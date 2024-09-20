@@ -425,6 +425,61 @@ function analytical_mie_coefficients(cavity::Cavity, w, nmax)
 end
 
 
+function log_mie_coefficients(cavity::Cavity, w, nmax = 0)
+    x_stop, y_stop, n_max = max_order(cavity, w)
+    nmax != 0 ? n_max = nmax : nothing
+    x = size_parameter(cavity, w)
+    ref_idx = refractive_index(cavity, w)
+    y = x * ref_idx
+    T = typeof(x)
+
+    gy = zeros(Complex{T}, n_max + 1)
+    dx = zeros(Complex{T}, n_max + 1)
+    cv = zeros(Complex{T}, n_max)
+    dv = zeros(Complex{T}, n_max)
+    logcv = zeros(Complex{T}, n_max)
+    logdv = zeros(Complex{T}, n_max)
+    logconjcv = zeros(Complex{T}, n_max)
+    logconjdv = zeros(Complex{T}, n_max)
+    cv_an = zeros(Complex{T}, n_max)
+    dv_an = zeros(Complex{T}, n_max)
+    
+
+    # downward recursion
+    @inbounds for n = n_max:-1:1
+        rn = n + 1
+        dx[n] = (rn / x) - (1 / (dx[rn] + rn / x))
+    end
+    
+    gy0 = im #riccatibesselksi1(-1, y)/riccatibesselksi1(0, y)
+
+    # upward recursion
+    @inbounds for n = 1:nmax
+        if n == 1 
+            gy[n] = 1/(- gy0 + n / y ) - n/y
+        else
+            rn = n - 1 
+            gy[n] = 1/(- gy[rn] + n / y ) - n/y
+        end
+
+        psi_n = riccatibesselpsi(n, x)
+        ksi_n = riccatibesselksi1(n, x)
+        psi_n_1 = riccatibesselpsi(n - 1, x)
+        ksi_n_1 = riccatibesselksi1(n - 1, x)
+        
+       
+        t_c = gy[n] + ref_idx * n / x
+        t_d = gy[n] * ref_idx + n / x
+        
+        logcv[n] = log(-( t_c * ksi_n - ref_idx * ksi_n_1 )) - log( t_c * psi_n - ref_idx * psi_n_1 ) #TE
+        logdv[n] = log(-( t_d * ksi_n - ksi_n_1 )) - log( t_d * psi_n - psi_n_1 ) # TM
+        logconjcv[n] = log(conj(-( t_c * ksi_n - ref_idx * ksi_n_1 ))) - log(conj( t_c * psi_n - ref_idx * psi_n_1 )) #TE
+        logconjdv[n] = log(conj(-( t_d * ksi_n - ksi_n_1 ))) - log(conj( t_d * psi_n - psi_n_1 )) # TM
+    end
+    return  logcv, logdv, logconjcv, logconjdv
+end
+
+
 struct SphericalShell{U,V} <: AbstractObject
     sphere::U
     cavity::V
