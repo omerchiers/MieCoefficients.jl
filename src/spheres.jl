@@ -533,29 +533,66 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
     
     qw_te_1 = 0.0
     qw_tm_1 = 0.0
-    err = 1.0
+    err = 100
 
     if nmax != 0
         for i in 1:nmax
-            qw_te += (2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 - te_cav[i]*te_sph[i])^2
-            qw_tm += (2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 - tm_cav[i]*tm_sph[i])^2
-        end
-        return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm), n_max = n_max)
+            #qw_te += (2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 + te_cav[i]*te_sph[i])^2
+            #qw_tm += (2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 + tm_cav[i]*tm_sph[i])^2
+            
+            qw_te += (2*i+1) *(0.25 * exp(logte_cav[i] + logte_sph[i])
+                    + 0.25 * exp(logconjte_cav[i] + logte_sph[i])
+                    + 0.25 * exp(logte_cav[i] + logconjte_sph[i])
+                    + 0.25 * exp(logconjte_cav[i] + logconjte_sph[i])
+                    - 0.5 * exp(logte_cav[i] + logte_sph[i] + logconjte_sph[i])
+                    - 0.5 * exp(logconjte_cav[i] + logte_sph[i] + logconjte_sph[i])
+                    + real(te_sph[i]) 
+                    - exp(logte_sph[i] + logconjte_sph[i]) )/ abs(1 + exp(logte_cav[i] + logte_sph[i]))^2
+                    
+            qw_tm += (2*i+1) *(0.25 * exp(logtm_cav[i] + logtm_sph[i])
+                    + 0.25 * exp(logconjtm_cav[i] + logtm_sph[i])
+                    + 0.25 * exp(logtm_cav[i] + logconjtm_sph[i])
+                    + 0.25 * exp(logconjtm_cav[i] + logconjtm_sph[i])
+                    - 0.5 * exp(logtm_cav[i] + logtm_sph[i] + logconjtm_sph[i])
+                    - 0.5 * exp(logconjtm_cav[i] + logtm_sph[i] + logconjtm_sph[i])
+                    + real(tm_sph[i]) 
+                    - exp(logtm_sph[i] + logconjtm_sph[i]) )/ abs(1 + exp(logtm_cav[i] + logtm_sph[i]))^2
+        
+                end
+        return (te =  real(qw_te), tm = real(qw_tm), total = (qw_te + qw_tm), nmax = n_max)
     elseif nmax == 0
         i=0
         while (err > rtol) && (i < n_max)
             i += 1 
-            qw_te += (2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 - te_cav[i]*te_sph[i])^2
-            qw_tm += (2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 - tm_cav[i]*tm_sph[i])^2       
+            #qw_te += (2*i+1) * (real(te_cav[i]) + 1) * (real(te_sph[i]) - abs(te_sph[i])^2) / abs(1 + te_cav[i]*te_sph[i])^2
+            #qw_tm += (2*i+1) * (real(tm_cav[i]) + 1) * (real(tm_sph[i]) - abs(tm_sph[i])^2) / abs(1 + tm_cav[i]*tm_sph[i])^2       
+            qw_te += real((2*i+1) *(0.25 * exp(logte_cav[i] + logte_sph[i])
+                    + 0.25 * exp(logconjte_cav[i] + logte_sph[i])
+                    + 0.25 * exp(logte_cav[i] + logconjte_sph[i])
+                    + 0.25 * exp(logconjte_cav[i] + logconjte_sph[i])
+                    - 0.5 * exp(logte_cav[i] + logte_sph[i] + logconjte_sph[i])
+                    - 0.5 * exp(logconjte_cav[i] + logte_sph[i] + logconjte_sph[i])
+                    + real(te_sph[i]) 
+                    - exp(logte_sph[i] + logconjte_sph[i]) )/ abs(1 + exp(logte_cav[i] + logte_sph[i]))^2)
+                    
+            qw_tm += real((2*i+1) *(0.25 * exp(logtm_cav[i] + logtm_sph[i])
+                    + 0.25 * exp(logconjtm_cav[i] + logtm_sph[i])
+                    + 0.25 * exp(logtm_cav[i] + logconjtm_sph[i])
+                    + 0.25 * exp(logconjtm_cav[i] + logconjtm_sph[i])
+                    - 0.5 * exp(logtm_cav[i] + logtm_sph[i] + logconjtm_sph[i])
+                    - 0.5 * exp(logconjtm_cav[i] + logtm_sph[i] + logconjtm_sph[i])
+                    + real(tm_sph[i]) 
+                    - exp(logtm_sph[i] + logconjtm_sph[i]) )/ abs(1 + exp(logtm_cav[i] + logtm_sph[i]))^2)
+       
             
             err = abs(qw_te_1 + qw_tm_1 - qw_te - qw_tm)/abs(qw_te + qw_tm)
             qw_te_1 = qw_te
             qw_tm_1 = qw_tm
            
         end
-        i > n_max ? error("The calculation did not converge. The number of iterations exceeds the value of n_max. Try increasing rtol.") : nothing 
-        err > rtol ? error("The calculation did not converge. The relative error is larger than rtol. Try increasing rtol.") : nothing
-        return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm), numiter = i, n_max = n_max, rel_error = err)
+        #i > n_max ? error("The calculation did not converge. The number of iterations exceeds the value of n_max. Try increasing rtol.") : nothing 
+        #err > rtol ? error("The calculation did not converge. The relative error is larger than rtol. Try increasing rtol.") : nothing
+        return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm), numiter = i, nmax = n_max, rel_error = err)
     end
 end
 
@@ -571,7 +608,7 @@ function heat_flux(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
     qw_tm = delTheta * transm[:tm] * 2 / pi
     qw_tot = delTheta * transm[:total] * 2 / pi
     isnan(qw_tot) ? (@show w) : nothing
-    return (te = qw_te, tm = qw_tm, total = qw_tot, nmax = transm[:n_max])
+    return (te = qw_te, tm = qw_tm, total = qw_tot, nmax = transm[:nmax])
 end
 
 "Spectral heat flux for a single Mie order"
