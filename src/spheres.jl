@@ -137,6 +137,50 @@ function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
 end
 
 
+
+function log_mie_coefficients(sphere::Sphere, w, nmax = 0)
+    x_stop, y_stop, n_max = max_order(sphere, w)
+    n_max_down = n_max + 1
+    nmax != 0 ? n_max = nmax : nothing
+    nmax != 0 ? n_max_down = nmax : nothing
+    size_par = size_parameter(sphere, w)
+    ref_idx = refractive_index(sphere, w)
+    y = size_par * ref_idx
+    T = typeof(size_par)
+
+    d = zeros(Complex{T}, n_max_down)
+    d[n_max_down] = start_value(n_max_down, y)
+    logav = zeros(Complex{T}, n_max)
+    logbv = zeros(Complex{T}, n_max)
+    logconjav = zeros(Complex{T}, n_max)
+    logconjbv = zeros(Complex{T}, n_max)
+    
+    # downward recursion
+    for n = (n_max_down-1):-1:1
+        rn = n + 1
+        d[n] = (rn / y) - (1 / (d[n+1] + rn / y))
+    end
+
+    # upward recursion
+    for n = 1:n_max #round(Int, x_stop)
+        psi_n = riccatibesselpsi(n, size_par)
+        ksi_n = riccatibesselksi1(n, size_par)
+        psi_n_1 = riccatibesselpsi(n - 1, size_par)
+        ksi_n_1 = riccatibesselksi1(n - 1, size_par)
+        t_a = d[n] / ref_idx + n / size_par
+        t_b = d[n] * ref_idx + n / size_par
+        logav[n] = log(t_a * psi_n - psi_n_1) - log(t_a * ksi_n - ksi_n_1)
+        logbv[n] = log(t_b * psi_n - psi_n_1) - log(t_b * ksi_n - ksi_n_1)
+        logconjav[n] = log(conj(t_a * psi_n - psi_n_1)) - log(conj(t_a * ksi_n - ksi_n_1))
+        logconjbv[n] = log(conj(t_b * psi_n - psi_n_1)) - log(conj(t_b * ksi_n - ksi_n_1))
+
+    end
+    return logav, logbv, logconjav, logconjbv
+end
+
+
+
+
 function mie_coefficients_handcoded(sphere::Sphere, w, nmax = 0 )
     x_stop, y_stop, n_max = max_order(sphere, w)
     n_max_down = n_max + 100
