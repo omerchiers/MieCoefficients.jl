@@ -101,6 +101,7 @@ Riccati-Bessel function of the third kind at order `nu`, ``ξ_ν(x) = x(j_ν(x) 
 riccatibesselksi2(nu, x) = √(π*x/2) * (besselj(nu + 1//2, x) - im * bessely(nu + 1//2, x))
 
 
+
 function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
     x_stop, y_stop, n_max = max_order(sphere, w)
     n_max_down = n_max + 100
