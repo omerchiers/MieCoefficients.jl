@@ -141,6 +141,7 @@ function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
     T = typeof(size_par)
 
     d = zeros(Complex{T}, n_max_down)
+    d[n_max_down] = start_value(n_max_down, y)
     av = zeros(Complex{T}, n_max)
     bv = zeros(Complex{T}, n_max)
     
