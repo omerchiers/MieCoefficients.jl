@@ -388,6 +388,43 @@ function mie_coefficients(cavity::Cavity, w, nmax = 0)
 end
 
 
+function analytical_mie_coefficients(cavity::Cavity, w, nmax)
+    x = size_parameter(cavity, w)
+    ref_idx = refractive_index(cavity, w)
+    y = x * ref_idx
+    T = typeof(x)
+
+    cv_an = zeros(Complex{T}, n_max)
+    dv_an = zeros(Complex{T}, n_max)
+    
+  
+    # upward recursion
+    for n in 1:nmax
+        if n == 1 
+            gy[n] = 1/(- gy0 + n / y ) - n/y
+        else
+            rn = n - 1 
+            gy[n] = 1/(- gy[rn] + n / y ) - n/y
+        end
+
+        psi_n = riccatibesselpsi(n, x)
+        ksi_n = riccatibesselksi1(n, x)
+        ksiy_n = riccatibesselksi1(n, y)
+        psi_n_1 = riccatibesselpsi(n - 1, x)
+        ksi_n_1 = riccatibesselksi1(n - 1, x)
+        ksiy_n_1 = riccatibesselksi1(n - 1, y)
+        
+        psip_n = psi_n_1 - n/x * psi_n
+        ksip_n = ksi_n_1 - n/x * ksi_n
+        ksipy_n = ksiy_n_1 - n/y * ksiy_n
+       
+        cv_an[n] = - (ksi_n * ksipy_n - ref_idx * ksip_n * ksiy_n) / (psi_n * ksipy_n - ref_idx * psip_n * ksiy_n) #TE
+        dv_an[n] = - (ref_idx * ksi_n * ksipy_n - ksip_n * ksiy_n) / (ref_idx * psi_n * ksipy_n - psip_n * ksiy_n) #TM
+    end
+    return  cv_an, dv_an
+end
+
+
 struct SphericalShell{U,V} <: AbstractObject
     sphere::U
     cavity::V
