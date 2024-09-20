@@ -127,6 +127,7 @@ function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
         ksi_n = riccatibesselksi1(n, size_par)
         psi_n_1 = riccatibesselpsi(n - 1, size_par)
         ksi_n_1 = riccatibesselksi1(n - 1, size_par)
+        
         t_a = d[n] / ref_idx + n / size_par
         t_b = d[n] * ref_idx + n / size_par
         av[n] = (t_a * psi_n - psi_n_1) / (t_a * ksi_n - ksi_n_1)
