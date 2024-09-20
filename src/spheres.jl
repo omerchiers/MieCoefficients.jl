@@ -519,7 +519,7 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
     xcav = size_parameter(cavity, w)
     xcav_stop, ycav_stop, ncav_max = max_order(cavity, w)
    
-    n_max = min(nsph_max, ncav_max)
+    n_max = max(nsph_max, ncav_max)*3
     nmax != 0 ? n_max = nmax : nothing
 
     te_sph, tm_sph = mie_coefficients(sphere, w, n_max)
