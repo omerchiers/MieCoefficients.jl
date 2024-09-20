@@ -340,7 +340,6 @@ end
 
 
 
-
 function mie_coefficients(cavity::Cavity, w, nmax = 0)
     x_stop, y_stop, n_max = max_order(cavity, w)
     nmax != 0 ? n_max = nmax : nothing
@@ -353,7 +352,6 @@ function mie_coefficients(cavity::Cavity, w, nmax = 0)
     dx = zeros(Complex{T}, n_max + 1)
     cv = zeros(Complex{T}, n_max)
     dv = zeros(Complex{T}, n_max)
-    
 
     # downward recursion
     @inbounds for n = n_max:-1:1
