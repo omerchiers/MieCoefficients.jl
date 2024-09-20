@@ -495,7 +495,7 @@ cavity(spsh :: SphericalShell) = spsh.cavity
 function transmission_n(miecoeff_sphere, miecoeff_cavity, order)
     sph = miecoeff_sphere
     cav = miecoeff_cavity
-    return (2 * order + 1) * (real(cav) + 1) * (real(sph) - abs(sph)^2) / abs(1 - cav * sph)^2 
+    return (2 * order + 1) * (real(cav) + 1) * (real(sph) - abs(sph)^2) / abs(1 + cav * sph)^2 
 end
 
 function transmission_n(sphericalshell :: SphericalShell, w, order)
