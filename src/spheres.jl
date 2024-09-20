@@ -480,6 +480,9 @@ function log_mie_coefficients(cavity::Cavity, w, nmax = 0)
 end
 
 
+
+
+
 struct SphericalShell{U,V} <: AbstractObject
     sphere::U
     cavity::V
