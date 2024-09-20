@@ -134,6 +134,7 @@ function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
     x_stop, y_stop, n_max = max_order(sphere, w)
     n_max_down = n_max + 1
     nmax != 0 ? n_max = nmax : nothing
+    nmax != 0 ? n_max_down = nmax : nothing
     size_par = size_parameter(sphere, w)
     ref_idx = refractive_index(sphere, w)
     y = size_par * ref_idx
