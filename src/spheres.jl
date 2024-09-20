@@ -374,6 +374,7 @@ function mie_coefficients(cavity::Cavity, w, nmax = 0)
 
         psi_n = riccatibesselpsi(n, x)
         ksi_n = riccatibesselksi1(n, x)
+        
         psi_n_1 = riccatibesselpsi(n - 1, x)
         ksi_n_1 = riccatibesselksi1(n - 1, x)
 
