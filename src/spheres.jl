@@ -524,6 +524,9 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
 
     te_sph, tm_sph = mie_coefficients(sphere, w, n_max)
     te_cav, tm_cav = mie_coefficients(cavity, w, n_max)
+
+    logte_sph, logtm_sph, logconjte_sph, logconjtm_sph = log_mie_coefficients(sphere, w, n_max)
+    logte_cav, logtm_cav, logconjte_cav, logconjtm_cav = log_mie_coefficients(cavity, w, n_max)
     
     qw_te = 0.0
     qw_tm = 0.0
