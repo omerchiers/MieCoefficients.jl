@@ -104,7 +104,7 @@ riccatibesselksi2(nu, x) = √(π*x/2) * (besselj(nu + 1//2, x) - im * bessely(n
 
 function mie_coefficients_openlibm(sphere::Sphere, w, nmax = 0)
     x_stop, y_stop, n_max = max_order(sphere, w)
-    n_max_down = n_max + 100
+    n_max_down = n_max + 1
     nmax != 0 ? n_max = nmax : nothing
     size_par = size_parameter(sphere, w)
     ref_idx = refractive_index(sphere, w)
