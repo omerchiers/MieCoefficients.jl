@@ -213,15 +213,17 @@ end
 
 function mie_coefficients_handcoded(sphere::Sphere, w, nmax = 0 )
     x_stop, y_stop, n_max = max_order(sphere, w)
-    n_max_down = n_max + 100
+    n_max_down = n_max + 1
     nmax != 0 ? n_max = nmax : nothing
+    nmax != 0 ? n_max_down = nmax : nothing
     size_par = size_parameter(sphere, w)
     ref_idx = refractive_index(sphere, w)
     y = size_par * ref_idx
 
     d = zeros(Complex{Float64}, n_max_down)
-    av = zeros(Complex{Float64}, round(Int, x_stop))
-    bv = zeros(Complex{Float64}, round(Int, x_stop))
+    d[n_max_down] = start_value(n_max_down, y)
+    av = zeros(Complex{Float64}, n_max)
+    bv = zeros(Complex{Float64}, n_max)
 
     # downward recursion
     for n = (n_max_down-1):-1:1
@@ -237,7 +239,7 @@ function mie_coefficients_handcoded(sphere::Sphere, w, nmax = 0 )
     xi1 = Complex{Float64}(psi1, -chi1)
 
    # upward recursion
-    @inbounds for n = 1:round(Int, x_stop)
+    for n = 1:n_max
         psi = (2 * n - 1) * psi1 / size_par - psi0
         chi = (2 * n - 1) * chi1 / size_par - chi0
         xi = Complex{Float64}(psi, -chi)
@@ -518,8 +520,10 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
     
     xcav = size_parameter(cavity, w)
     xcav_stop, ycav_stop, ncav_max = max_order(cavity, w)
-   
-    n_max = max(nsph_max, ncav_max)*3
+     
+    scale = xcav-xsph
+
+    n_max = min(nsph_max, ncav_max)
     nmax != 0 ? n_max = nmax : nothing
 
     te_sph, tm_sph = mie_coefficients(sphere, w, n_max)
