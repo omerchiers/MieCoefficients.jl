@@ -564,7 +564,7 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
                     - exp(logtm_sph[i] + logconjtm_sph[i]) )/ abs(1 + exp(logtm_cav[i] + logtm_sph[i]))^2
         
                 end
-        return (te =  real(qw_te), tm = real(qw_tm), total = (qw_te + qw_tm), nmax = n_max)
+        return (te =  real(qw_te), tm = real(qw_tm), total = real(qw_te + qw_tm), nmax = n_max)
     elseif nmax == 0
         i=0
         while (err > rtol) && (i < n_max)
