@@ -523,7 +523,8 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
      
     scale = xcav-xsph
 
-    n_max = min(nsph_max, ncav_max)
+   n_max = min(nsph_max, ncav_max) #Integer(round(1/xcav/2)) + nsph_max
+   n_max = Integer(round(xsph/(xcav - xsph)/3)) + n_max
     nmax != 0 ? n_max = nmax : nothing
 
     te_sph, tm_sph = mie_coefficients(sphere, w, n_max)
