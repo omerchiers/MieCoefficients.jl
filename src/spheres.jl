@@ -596,8 +596,8 @@ function transmission(sphericalshell :: SphericalShell, w; nmax=0, rtol=1e-6)
             qw_tm_1 = qw_tm
            
         end
-        #i > n_max ? error("The calculation did not converge. The number of iterations exceeds the value of n_max. Try increasing rtol.") : nothing 
-        #err > rtol ? error("The calculation did not converge. The relative error is larger than rtol. Try increasing rtol.") : nothing
+        i > n_max ? @warn("The calculation did not converge. The number of iterations exceeds the value of n_max. Try increasing rtol.") : nothing 
+        err > rtol ? @warn("The calculation did not converge. The relative error is larger than rtol. Try increasing rtol.") : nothing
         return (te =  qw_te, tm = qw_tm, total = (qw_te + qw_tm), numiter = i, nmax = n_max, rel_error = err)
     end
 end
